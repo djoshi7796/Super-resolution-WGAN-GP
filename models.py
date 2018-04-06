@@ -19,6 +19,19 @@ from keras.optimizers import Adam, RMSprop
 from keras import initializers
 from preprocessing import load_image, show
 
+class ElapsedTimer(object):
+	def __init__(self):
+		self.start_time = time.time()
+	def elapsed(self,sec):
+		if sec < 60:
+			return str(sec) + " sec"
+		elif sec < (60 * 60):
+			return str(sec / 60) + " min"
+		else:
+			return str(sec / (60 * 60)) + " hr"
+	def elapsed_time(self):
+		print("Elapsed: %s " % self.elapsed(time.time() - self.start_time) )
+
 class WGAN_GP():
 	
 	def __init__(self, rows, cols, channels):
@@ -85,8 +98,7 @@ class WGAN_GP():
 			return self.DM
 		optimizer = Adams(lr=0.0001, beta_1=0, beta_2=0.9)
 		weight = i
-		self.DM.compile('binary_crossentropy',optimizer)
-		#complete this	
+		self.DM.compile('binary_crossentropy',optimizer)	
 	
 	def adversarial_model(self):
 		
@@ -94,8 +106,6 @@ class WGAN_GP():
 			return self.AM
 		optimizer = Adams(lr=0.0001, beta_1=0, beta_2=0.9)
 		self.AM.compile('binary_crossentropy',optimizer)
-		#complete this as well
-		#use adam wala optimizer
 		
 
 	
@@ -108,14 +118,59 @@ class CelebA_WGAN_GP():
 		self.D = self.WGAN_GP.discriminator_model()
 		self.A = self.WGAN_GP.adversarial_model()
 		self.G = self.WGAN_GP.generator()
+        self.x_train = None #data sample
+        self.y_train = None #noise sample
+        
+        self.x_dim = 116412
+        self.z_dim = 116412
+
+        self.x = K.placeholder(K.float32, [None, self.x_dim], name = 'x')
+        self.z = K.placeholder(K.float32, [None, self.z_dim], name = 'z')        
+
+
+        self.g_loss = K.mean(self.d_)
+        self.d_loss = K.mean(self.d) - K.mean(self.d_)
+
+        epsilon = K.random_uniform([], 0.0, 1.0)
+        x_hat = epsilon * self.x + (1 - epsilon) * self.x_
+        d_hat = self.d_net(x_hat)
+
+        ddx = K.gradients(d_hat, x_hat)[0]
+        print(ddx.get_shape().as_list())
+        ddx = K.sqrt(K.reduce_sum(K.square(ddx), axis=1)) #redo this!!!!!!!
+        ddx = K.reduce_mean(K.square(ddx - 1.0) * scale)
+
+        self.d_loss = self.d_loss + ddx
+
+        self.d_adam, self.g_adam = None, None
+        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):     
+
+
+
 
 	def train(self, train_steps = 2000, batch_size = 256):
-		for t in range(train_steps / 5):
-			for i in range(batch_size):
-				pass
-				#some variables thing i didn't quite understand 
+		
+
+        
+
+        for t in range (train_steps):
+            d_iters = 5
+            if t % 50 == 0 or t < 5:
+                d_iters = 10	
+            
+            for _ in range(d_iters):
+                #assuming that I'll get separate arrays for the original data and the bicubic data
+                x_train  # = give data in batches of size batch size	
+                y_train # = give the noisy images to batchsize, gen_model(batch_size)
+            #Not sure about this yet
+                self.A() #Why discriminator model here
+            
+            self.G()  # why generator here       
+            
+            
+
+        pass
 			#add an adam optimizer in the adversarial model to use the new weights
-		#test maybe??
 
 if __name__ == "__main__":
 
